@@ -1,15 +1,13 @@
 #include <Wire.h>
-#include <TwoMotors.h>
+#include <FourMotors.h>
 #include <DC_motor_controller.h>
 #include <Servo.h>
 #include <Adafruit_TCS34725softi2c.h>
 #include <VL53L0X.h>
 #include <LiquidCrystal.h>
 
-DC_motor_controller motorFR, motorFL;
-DC_motor_controller motorBR, motorBL;
-TwoMotors bothR(motorFR, motorBR);
-TwoMotors bothL(motorFL, motorBL);
+DC_motor_controller motorFR, motorBR, motorFL, motorBL;
+FourMotors motor = FourMotors(&motorFR, &motorBR, &motorFL, &motorBL);
 Servo servo1, servo2, servo3, servo4, servo5;
 
 Adafruit_TCS34725softi2c tcsR = Adafruit_TCS34725softi2c
@@ -52,19 +50,23 @@ void setup() {
   motorFL.setEncoderPin(3, 23); 
   motorBR.setEncoderPin(18, 24); 
   motorBL.setEncoderPin(19, 25); 
-  attachInterrupt(digitalPinToInterrupt(2), interrupt_motorFR, FALLING);
-  attachInterrupt(digitalPinToInterrupt(3), interrupt_motorFL, FALLING);
-  attachInterrupt(digitalPinToInterrupt(18), interrupt_motorBR, FALLING);
-  attachInterrupt(digitalPinToInterrupt(19), interrupt_motorBL, FALLING);
+  attachInterrupt(digitalPinToInterrupt(2), interruptMotorFR, FALLING);
+  attachInterrupt(digitalPinToInterrupt(3), interruptMotorFL, FALLING);
+  attachInterrupt(digitalPinToInterrupt(18), interruptMotorBR, FALLING);
+  attachInterrupt(digitalPinToInterrupt(19), interruptMotorBL, FALLING);
   motorFR.setRR(21);
   motorFL.setRR(21);
   motorBR.setRR(21);
   motorBL.setRR(21);
+  motorFR.setPPR(11);
+  motorFL.setPPR(11);
+  motorBR.setPPR(11);
+  motorBL.setPPR(11);
   // precisamos testar até encontrar bons valores de kp, ki e kd
-  motorFR.setPIDconstants(1.4, 0.9, 0.05); //kp, ki, kd
-  motorFL.setPIDconstants(1.4, 0.9, 0.05); //kp, ki, kd
-  motorBR.setPIDconstants(1.4, 0.9, 0.05); //kp, ki, kd
-  motorBL.setPIDconstants(1.4, 0.9, 0.05); //kp, ki, kd
+  motorFR.setPIDconstants(1.2, 0.2, 0.015); //kp, ki, kd
+  motorFL.setPIDconstants(1.2, 0.2, 0.015); //kp, ki, kd
+  motorBR.setPIDconstants(1.2, 0.2, 0.015); //kp, ki, kd
+  motorBL.setPIDconstants(1.2, 0.2, 0.015); //kp, ki, kd
   motorFR.setPins(); 
   motorFL.setPins(); 
   motorBR.setPins(); 
@@ -73,11 +75,13 @@ void setup() {
   motorFL.stop();
   motorBR.stop();
   motorBL.stop();
+
   servo1.attach(A0);
   servo1.attach(A1);
   servo1.attach(A2);
   servo1.attach(A3);
   servo1.attach(A4);
+
 
   if (tcsR.begin() && tcsM.begin() && tcsL.begin()) {
     Serial.println("Found sensors");
@@ -93,13 +97,10 @@ void setup() {
     while (1) {}
   }
   sensorVL.startContinuous();
-
+  
 }
 
 void loop() {
-  TwoMotors runR(255);
-  TwoMotors runL(255);
-
   uint16_t r, g, b, c, colorTemp, lux;
   tcsR.getRawData(&r, &g, &b, &c);
   colorTemp = tcsR.calculateColorTemperature(r, g, b);
@@ -126,16 +127,16 @@ void loop() {
 
 }
 
-void interrupt_motorFR () {   
+void interruptMotorFR () {   
   motorFR.isr();              
 }
-void interrupt_motorFL () {   
+void interruptMotorFL () {   
   motorFL.isr();              
 }
-void interrupt_motorBR () {   
+void interruptMotorBR () {   
   motorBR.isr();              
 }
-void interrupt_motorBL () {   
+void interruptMotorBL () {   
   motorBL.isr();              
 }
 
@@ -147,5 +148,15 @@ Portas utilizadas:
 5  11  23  29  35  41  A5  
 6  12  24  30  36  A0  A6  
 7  13  25  31  37  A1  A7  
+
+O que temos até então:
+1 arduino mega
+4 motores encoder jga25
+2 ponte h l298n
+5 servos sg90
+3 sensores tcs34725(r, m, l)
+1 sensor vl53l0x
+4 sensores sr04
+1 lcd 16x2
 */
 
